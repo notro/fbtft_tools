@@ -23,6 +23,8 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/gpio_mouse.h>
+#include <linux/io.h>
+#include <linux/delay.h>
 
 #define DRVNAME "gpio_mouse_device"
 
@@ -63,6 +65,14 @@ static int bright = -1;
 module_param(bright, int, 0);
 MODULE_PARM_DESC(bright, "GPIO line for right button.");
 
+static bool pullup = false;
+module_param(pullup, bool, 0);
+MODULE_PARM_DESC(pulldown, "Enable internal pull up resistor for all (only on Raspberry Pi)");
+
+static bool pulldown = false;
+module_param(pulldown, bool, 0);
+MODULE_PARM_DESC(pulldown, "Enable internal pull down resistor for all (only on Raspberry Pi)");
+
 static unsigned int verbose = 0;
 module_param(verbose, uint, 0);
 MODULE_PARM_DESC(verbose, "0-1");
@@ -81,9 +91,67 @@ static struct platform_device gpio_mouse_device = {
     },
 };
 
+#ifdef CONFIG_ARCH_BCM2708
+static void gpio_pull(unsigned pin, unsigned pud)
+{
+#define	GPIO_PUD     37
+#define	GPIO_PUDCLK0 38
+#define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
+	u32 *gpio = ioremap(0x20200000, SZ_16K);
+
+	if (verbose > 1)
+		pr_info(DRVNAME": %s(%d, %d)\n", __func__, pin, pud);
+
+	/* set as input */
+	INP_GPIO(pin);
+	/* set pull tri/down/up */
+	*(gpio + GPIO_PUD) = pud & 3 ;		
+	udelay(5);
+	*(gpio + GPIO_PUDCLK0 + (pin>31 ? 1 : 0) ) = 1 << (pin & 31);
+	udelay(5);
+	*(gpio + GPIO_PUD) = 0;
+	udelay(5);
+	*(gpio + GPIO_PUDCLK0 + (pin>31 ? 1 : 0) ) = 0;
+	udelay(5);
+
+	iounmap(gpio);
+#undef INP_GPIO
+}
+
+static void gpio_pull_all(unsigned pud)
+{
+	if (verbose > 1)
+		pr_info(DRVNAME": %s(%d)\n", __func__, pud);
+
+	if (up > -1)
+		gpio_pull(up, pud);
+	if (down > -1)
+		gpio_pull(down, pud);
+	if (left > -1)
+		gpio_pull(left, pud);
+	if (right > -1)
+		gpio_pull(right, pud);
+	if (bleft > -1)
+		gpio_pull(bleft, pud);
+	if (bmiddle > -1)
+		gpio_pull(bmiddle, pud);
+	if (bright > -1)
+		gpio_pull(bright, pud);
+}
+#else
+static void gpio_pull_all(unsigned pud)
+{
+	pr_warning(DRVNAME": Pull up/down not supported on this platform\n");
+}
+#endif
+
 static void pdev_release(struct device *dev)
 {
- /* Used to silence this message:  Device 'xxx' does not have a release() function, it is broken and must be fixed. */
+	if (verbose > 1)
+		pr_info(DRVNAME": %s()\n", __func__);
+
+	if (pullup || pulldown)
+		gpio_pull_all(0);
 }
 
 static int __init gpio_mouse_device_init(void)
@@ -92,6 +160,14 @@ static int __init gpio_mouse_device_init(void)
 
 	if (verbose)
 		pr_info("\n\n"DRVNAME": %s()\n", __func__);
+
+	if (pullup && pulldown) {
+		pr_err(DRVNAME":  can't have both pullup and pulldown\n");
+		return -EINVAL;
+	}
+
+	if (verbose && (pullup || pulldown))
+		pr_info(DRVNAME":   Internal pull resistor: %s\n", pullup ? "up" : "down");
 
 	/* set platform_data values */
 	pdata.scan_ms = scan_ms;
@@ -104,12 +180,6 @@ static int __init gpio_mouse_device_init(void)
 	pdata.bmiddle = bmiddle;
 	pdata.bright = bright;
 
-	ret = platform_device_register(&gpio_mouse_device);
-	if (ret < 0) {
-		pr_err(DRVNAME":    platform_device_register() returned %d\n", ret);
-		return ret;
-	}
-
 	if (verbose) {
 		pr_info(DRVNAME":   scan_ms:  %d\n", scan_ms);
 		pr_info(DRVNAME":   polarity: %d\n", polarity);
@@ -120,6 +190,15 @@ static int __init gpio_mouse_device_init(void)
 		pr_info(DRVNAME":   bleft:    %d\n", bleft);
 		pr_info(DRVNAME":   bmiddle:  %d\n", bmiddle);
 		pr_info(DRVNAME":   bright:   %d\n", bright);
+	}
+
+	if (pullup || pulldown)
+		gpio_pull_all(pulldown ? 1 : 2);
+
+	ret = platform_device_register(&gpio_mouse_device);
+	if (ret < 0) {
+		pr_err(DRVNAME":    platform_device_register() returned %d\n", ret);
+		return ret;
 	}
 
 	return 0;
