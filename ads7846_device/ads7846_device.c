@@ -23,6 +23,7 @@
 #include <linux/init.h>
 #include <linux/spi/spi.h>
 #include <linux/spi/ads7846.h>
+#include <linux/gpio.h>
 #include <asm/irq.h>
 
 #define DRVNAME "ads7846_device"
@@ -50,7 +51,7 @@ MODULE_PARM_DESC(mode, "SPI mode (default: SPI_MODE_0)");
 
 static int irq = 0;
 module_param(irq, int, 0);
-MODULE_PARM_DESC(mode, "SPI irq. (default: irq=GPIO_IRQ_START+gpio_pendown)");
+MODULE_PARM_DESC(mode, "SPI irq. (default: irq=gpio_to_irq(gpio_pendown))");
 
 
 
@@ -189,7 +190,12 @@ static int __init ads7846_device_init(void)
 	spi_ads7846_device.bus_num = busnum;
 	spi_ads7846_device.chip_select = cs;
 	spi_ads7846_device.mode = mode;
-	irq = irq ? : (GPIO_IRQ_START + gpio_pendown);
+	irq = irq ? irq : (gpio_to_irq(gpio_pendown));
+	if(irq < 0) {
+		pr_err(DRVNAME": Unable to get IRQ assigned to gpio_pendown'\n");
+		return -EINVAL;
+	}
+
 	spi_ads7846_device.irq = irq;
 
 	/* set platform_data values */
