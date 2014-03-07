@@ -78,7 +78,7 @@ MODULE_PARM_DESC(autosleep_timeout, "inactivity timeout in milliseconds for auto
 static bool irq_pullup = false;
 #ifdef CONFIG_ARCH_BCM2708
 module_param(irq_pullup, bool, 0);
-MODULE_PARM_DESC(irq_pulldown, "Enable internal pull up resistor for irq");
+MODULE_PARM_DESC(irq_pullup, "Enable internal pull up resistor for irq");
 #endif
 
 /* GPIO block */
