@@ -110,7 +110,7 @@ static int set_gpio_pull(int gpio, enum gpio_pull_direction direction) {
 static int raw_gpio_set(int gpio, int val) {
 	if (gpio < 0 || gpio > 63)
 		return -1;
-	else if (gpio < 32) 
+	else if (gpio < 32)
 		__raw_writel(1<<gpio, val?GPSET0:GPCLR0);
 	else if (gpio < 64)
 		__raw_writel(1<<gpio, val?GPSET1:GPCLR1);
@@ -269,9 +269,9 @@ static irqreturn_t power_isr(int irqno, void *param) {
 static ssize_t do_shutdown_show(struct device *d,
 				struct device_attribute *attr, char *buf)
 {
-        ssize_t ret;
-        ret = sprintf(buf, "Write into this file to initiate a shutdown\n");
-        return ret;
+	ssize_t ret;
+	ret = sprintf(buf, "Write into this file to initiate a shutdown\n");
+	return ret;
 }
 
 static ssize_t do_shutdown_store(struct device *d,
@@ -290,8 +290,8 @@ static struct attribute *rpi_power_switch_sysfs_entries[] = {
 };
 
 static struct attribute_group rpi_power_switch_attribute_group = {
-        .name = NULL,
-        .attrs = rpi_power_switch_sysfs_entries,
+	.name = NULL,
+	.attrs = rpi_power_switch_sysfs_entries,
 };
 
 static struct class power_switch_class = {
@@ -319,20 +319,20 @@ int __init rpi_power_switch_init(void)
 
 	/* Register our own class for the power switch */
 	ret = class_register(&power_switch_class);
-        if (ret < 0) {
+	if (ret < 0) {
 		pr_err("%s: Unable to register class\n", power_switch_class.name);
-		goto out0;     
+		goto out0;
 	}
 
 
-        /* Create devices for each PWM present */
+	/* Create devices for each PWM present */
 	switch_dev = device_create(&power_switch_class, &platform_bus,
-                                MKDEV(0, 0), NULL, "pswitch%u", 0);
+				MKDEV(0, 0), NULL, "pswitch%u", 0);
 	if (IS_ERR(switch_dev)) {
 		pr_err("%s: device_create failed\n", power_switch_class.name);
 		ret = PTR_ERR(switch_dev);
 		goto out1;
-        }
+	}
 
 	ret = sysfs_create_group(&switch_dev->kobj,
 				 &rpi_power_switch_attribute_group);
