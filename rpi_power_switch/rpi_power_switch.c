@@ -66,8 +66,8 @@ enum gpio_pull_direction {
 
 
 /* Module Parameters */
-static int gpio_pin = 22;
-static int mode = MODE_SWITCH;
+static int gpio_pin = -1;
+static int mode = MODE_BUTTON;
 static int led_pin = 16;
 
 /* This is the base state.  When this changes, do a shutdown. */
@@ -308,6 +308,11 @@ int __init rpi_power_switch_init(void)
 {
 	int ret = 0;
 
+	if (gpio_pin < 0) {
+		pr_err(POWER_SWITCH_CLASS_NAME ": missing argument: gpio_pin\n");
+		return -EINVAL;
+	}
+
 	old_pm_power_off = pm_power_off;
 	pm_power_off = rpi_power_switch_power_off;
 
@@ -411,5 +416,8 @@ MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sean Cross <xobs@xoblo.gs> for Adafruit Industries <www.adafruit.com>");
 MODULE_ALIAS("platform:bcm2708_power_switch");
 module_param(gpio_pin, int, 0);
+MODULE_PARM_DESC(gpio_pin, "Switch gpio");
 module_param(led_pin, int, 0);
+MODULE_PARM_DESC(led_pin, "Indicator LED gpio (default: 16, ACT)");
 module_param(mode, int, 0);
+MODULE_PARM_DESC(mode, "Switch mode: 0-push button, 1-switch (default: push button)");
