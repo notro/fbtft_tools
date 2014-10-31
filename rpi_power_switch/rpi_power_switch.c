@@ -374,7 +374,7 @@ int __init rpi_power_switch_init(void)
 	 */
 	ret = request_irq(__gpio_to_irq(gpio_pin), power_isr,
 			  gpio_pol?IRQF_TRIGGER_RISING:IRQF_TRIGGER_FALLING,
-			  "Power button", NULL);
+			  "Power button", __gpio_to_irq(gpio_pin));
 	if (ret) {
 		pr_err("Unable to request IRQ\n");
 		goto out3;
