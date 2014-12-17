@@ -136,9 +136,6 @@ static void initiate_shutdown(struct work_struct *work) {
 		NULL,
 	};
 
-	/* We only want this IRQ to fire once, ever. */
-	free_irq(gpio_to_irq(gpio_pin), NULL);
-
 	/* Make sure the switch hasn't just bounced */
 	if (mode == MODE_SWITCH && gpio_get_value(gpio_pin) != gpio_pol)
 		return;
@@ -374,7 +371,7 @@ int __init rpi_power_switch_init(void)
 	 */
 	ret = request_irq(__gpio_to_irq(gpio_pin), power_isr,
 			  gpio_pol?IRQF_TRIGGER_RISING:IRQF_TRIGGER_FALLING,
-			  "Power button", __gpio_to_irq(gpio_pin));
+			  "Power button", NULL);
 	if (ret) {
 		pr_err("Unable to request IRQ\n");
 		goto out3;
