@@ -279,7 +279,7 @@ static ssize_t do_shutdown_store(struct device *d,
 	schedule_delayed_work(&initiate_shutdown_work, msecs_to_jiffies(10));
 	return count;
 }
-static DEVICE_ATTR(do_shutdown, 0666, do_shutdown_show, do_shutdown_store);
+static DEVICE_ATTR(do_shutdown, 0664, do_shutdown_show, do_shutdown_store);
 
 static struct attribute *rpi_power_switch_sysfs_entries[] = {
 	&dev_attr_do_shutdown.attr,
