@@ -12,7 +12,7 @@
 #include <linux/module.h>
 
 #include <asm/io.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <linux/delay.h>
 #include <linux/reboot.h>
 #include <linux/irq.h>
@@ -23,9 +23,19 @@
 #include <linux/init.h>
 #include <linux/workqueue.h>
 
+//Is this already defined, due to kernel compilation?
+#if !defined (BCM2708_PERI_BASE)
+//Pi or Pi2 architecture?
+#ifdef CONFIG_ARCH_BCM2709
+#define BCM2708_PERI_BASE       0x3F000000
+#else
+#define BCM2708_PERI_BASE       0x20000000
+#endif
+#endif
 
-#define BCM2708_PERI_BASE	0x20000000
-#define GPIO_BASE		(BCM2708_PERI_BASE + 0x200000)
+#if !defined (GPIO_BASE)
+#define GPIO_BASE               (BCM2708_PERI_BASE + 0x200000)
+#endif
 
 #define GPPUD (gpio_reg+0x94)
 #define GPPUDCLK0 (gpio_reg+0x98)
@@ -136,14 +146,15 @@ static void initiate_shutdown(struct work_struct *work) {
 		NULL,
 	};
 
-	/* We only want this IRQ to fire once, ever. */
-	free_irq(gpio_to_irq(gpio_pin), NULL);
-
 	/* Make sure the switch hasn't just bounced */
-	if (mode == MODE_SWITCH && gpio_get_value(gpio_pin) != gpio_pol)
-		return;
+	if (mode == MODE_SWITCH) {
+               /* bounce delay for a push button is ~8ms, wait twice to be sure */
+               mdelay(15);
+               if(gpio_get_value(gpio_pin) != gpio_pol)
+                       return;
+	}
 
-	call_usermodehelper(cmd, argv, envp, 0);
+	call_usermodehelper(cmd, argv, envp, UMH_WAIT_EXEC);
 }
 
 static struct delayed_work initiate_shutdown_work;
@@ -282,7 +293,7 @@ static ssize_t do_shutdown_store(struct device *d,
 	schedule_delayed_work(&initiate_shutdown_work, msecs_to_jiffies(10));
 	return count;
 }
-static DEVICE_ATTR(do_shutdown, 0666, do_shutdown_show, do_shutdown_store);
+static DEVICE_ATTR(do_shutdown, 0664, do_shutdown_show, do_shutdown_store);
 
 static struct attribute *rpi_power_switch_sysfs_entries[] = {
 	&dev_attr_do_shutdown.attr,
@@ -414,7 +425,11 @@ module_init(rpi_power_switch_init);
 module_exit(rpi_power_switch_cleanup);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Sean Cross <xobs@xoblo.gs> for Adafruit Industries <www.adafruit.com>");
+#ifdef CONFIG_ARCH_BCM2709
+MODULE_ALIAS("platform:bcm2709_power_switch");
+#else
 MODULE_ALIAS("platform:bcm2708_power_switch");
+#endif
 module_param(gpio_pin, int, 0);
 MODULE_PARM_DESC(gpio_pin, "Switch gpio");
 module_param(led_pin, int, 0);
