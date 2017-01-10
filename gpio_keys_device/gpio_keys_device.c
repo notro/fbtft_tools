@@ -111,7 +111,7 @@ static void gpio_pull(unsigned pin, unsigned pud)
 	/* set as input */
 	INP_GPIO(pin);
 	/* set pull tri/down/up */
-	*(gpio + GPIO_PUD) = pud & 3 ;		
+	*(gpio + GPIO_PUD) = pud & 3 ;
 	udelay(5);
 	*(gpio + GPIO_PUDCLK0 + (pin>31 ? 1 : 0) ) = 1 << (pin & 31);
 	udelay(5);
