@@ -89,13 +89,21 @@ static struct platform_device gpio_keys_device = {
 	},
 };
 
-#ifdef CONFIG_ARCH_BCM2708
+#if defined(CONFIG_ARCH_BCM2708) || defined(CONFIG_ARCH_BCM2709)
+
+//Pi or Pi2 architecture?
+#ifdef CONFIG_ARCH_BCM2709
+#define BCM2708_PERI_BASE       0x3F000000
+#else
+#define BCM2708_PERI_BASE       0x20000000
+#endif
+
 static void gpio_pull(unsigned pin, unsigned pud)
 {
 #define	GPIO_PUD     37
 #define	GPIO_PUDCLK0 38
 #define INP_GPIO(g) *(gpio+((g)/10)) &= ~(7<<(((g)%10)*3))
-	u32 *gpio = ioremap(0x20200000, SZ_16K);
+	u32 *gpio = ioremap(BCM2708_PERI_BASE + 0x200000, SZ_16K);
 
 	if (verbose > 1)
 		pr_info(DRVNAME": %s(%d, %d)\n", __func__, pin, pud);
