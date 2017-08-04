@@ -89,7 +89,7 @@ static struct platform_device gpio_keys_device = {
 	},
 };
 
-#if defined(CONFIG_ARCH_BCM2708) || defined(CONFIG_ARCH_BCM2709)
+#if defined(CONFIG_ARCH_BCM2708) || defined(CONFIG_ARCH_BCM2709) || defined(CONFIG_ARCH_BCM2835)
 
 //Pi or Pi2 architecture?
 #ifdef CONFIG_ARCH_BCM2709
